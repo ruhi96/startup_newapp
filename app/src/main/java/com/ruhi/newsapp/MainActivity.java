@@ -1,17 +1,24 @@
 package com.ruhi.newsapp;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.textfield.TextInputEditText;
 
 import com.ruhi.newsapp.adapters.CaseStudyAdapter;
 import com.ruhi.newsapp.models.CaseStudy;
@@ -28,15 +35,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
+    private static final String PREFS_NAME = "NewsAppPrefs";
+    private static final String KEY_API_KEY = "openai_api_key";
     
     private RecyclerView recyclerView;
     private CaseStudyAdapter adapter;
     private ProgressBar progressBar;
     private Button btnRefresh;
     private Button btnToggleDebug;
+    private Button btnSettings;
     private ScrollView debugView;
     private TextView tvDebug;
     
+    private SharedPreferences sharedPreferences;
     private boolean debugVisible = false;
     private StringBuilder debugLog = new StringBuilder();
 
@@ -45,12 +56,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
+        sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        
         initViews();
         setupRecyclerView();
         setupListeners();
         
         logDebug("App started");
-        loadCaseStudies();
+        
+        // Check if API key exists, if not show dialog
+        checkAndRequestApiKey();
     }
 
     private void initViews() {
@@ -58,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         btnRefresh = findViewById(R.id.btnRefresh);
         btnToggleDebug = findViewById(R.id.btnToggleDebug);
+        btnSettings = findViewById(R.id.btnSettings);
         debugView = findViewById(R.id.debugView);
         tvDebug = findViewById(R.id.tvDebug);
     }
@@ -71,13 +87,22 @@ public class MainActivity extends AppCompatActivity {
     private void setupListeners() {
         btnRefresh.setOnClickListener(v -> {
             logDebug("Refresh button clicked");
-            loadCaseStudies();
+            if (hasApiKey()) {
+                loadCaseStudies();
+            } else {
+                showApiKeyDialog();
+            }
         });
         
         btnToggleDebug.setOnClickListener(v -> {
             debugVisible = !debugVisible;
             debugView.setVisibility(debugVisible ? View.VISIBLE : View.GONE);
             logDebug("Debug view " + (debugVisible ? "shown" : "hidden"));
+        });
+        
+        btnSettings.setOnClickListener(v -> {
+            logDebug("Settings button clicked");
+            showApiKeyDialog();
         });
     }
 
@@ -149,6 +174,74 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void checkAndRequestApiKey() {
+        if (!hasApiKey()) {
+            logDebug("No API key found, showing dialog...");
+            showApiKeyDialog();
+        } else {
+            logDebug("API key found, loading case studies...");
+            loadCaseStudies();
+        }
+    }
+    
+    private boolean hasApiKey() {
+        String apiKey = sharedPreferences.getString(KEY_API_KEY, "");
+        return apiKey != null && !apiKey.trim().isEmpty();
+    }
+    
+    private void showApiKeyDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_api_key, null);
+        TextInputEditText etApiKey = dialogView.findViewById(R.id.etApiKey);
+        
+        // Pre-fill with existing key if available
+        String existingKey = sharedPreferences.getString(KEY_API_KEY, "");
+        if (!existingKey.isEmpty()) {
+            etApiKey.setText(existingKey);
+        }
+        
+        builder.setView(dialogView)
+                .setTitle("OpenAI API Key")
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String apiKey = etApiKey.getText().toString().trim();
+                    if (!apiKey.isEmpty()) {
+                        saveApiKey(apiKey);
+                        logDebug("API key saved successfully");
+                        Toast.makeText(this, "API key saved!", Toast.LENGTH_SHORT).show();
+                        
+                        // Load case studies if we just saved a new key
+                        if (adapter.getItemCount() == 0) {
+                            loadCaseStudies();
+                        }
+                    } else {
+                        Toast.makeText(this, "API key cannot be empty", Toast.LENGTH_SHORT).show();
+                        logDebug("API key cannot be empty");
+                    }
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    dialog.dismiss();
+                    if (!hasApiKey()) {
+                        logDebug("No API key provided, app cannot function");
+                        Toast.makeText(this, "API key required to generate case studies", 
+                                Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setCancelable(false);
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+    
+    private void saveApiKey(String apiKey) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(KEY_API_KEY, apiKey);
+        editor.apply();
+    }
+    
+    public String getApiKey() {
+        return sharedPreferences.getString(KEY_API_KEY, "");
+    }
+    
     private void logDebug(String message) {
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
         String timestamp = sdf.format(new Date());

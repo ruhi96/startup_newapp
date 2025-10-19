@@ -1,77 +1,40 @@
 package com.ruhi.newsapp.services;
 
 import android.content.Context;
-import android.content.res.XmlResourceParser;
+import android.content.SharedPreferences;
 import android.util.Log;
 
-import com.ruhi.newsapp.R;
 import com.ruhi.newsapp.models.CaseStudy;
 import com.ruhi.newsapp.models.NewsArticle;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.xmlpull.v1.XmlPullParser;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class OpenAIService {
     private static final String TAG = "OpenAIService";
-    private static String API_KEY = null;
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
+    private static final String PREFS_NAME = "NewsAppPrefs";
+    private static final String KEY_API_KEY = "openai_api_key";
     
-    private static void initApiKey(Context context) {
-        if (API_KEY != null) return;
+    private static String getApiKey(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String apiKey = prefs.getString(KEY_API_KEY, "");
         
-        try {
-            // Try to load from local_api_keys.xml first (not committed to git)
-            File localKeysFile = new File(context.getFilesDir().getParentFile().getParentFile().getParent(), "local_api_keys.xml");
-            if (localKeysFile.exists()) {
-                API_KEY = parseApiKeyFromFile(localKeysFile);
-                Log.d(TAG, "Loaded API key from local_api_keys.xml");
-                return;
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "Could not load from local_api_keys.xml: " + e.getMessage());
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            Log.e(TAG, "API key not found in SharedPreferences!");
+            return "";
         }
         
-        try {
-            // Fall back to api_keys.xml from resources
-            API_KEY = context.getString(R.string.openai_api_key);
-            if (API_KEY.equals("YOUR_OPENAI_API_KEY_HERE")) {
-                Log.e(TAG, "API key not configured! Please add your OpenAI API key to api_keys.xml");
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to load API key", e);
-            API_KEY = "YOUR_OPENAI_API_KEY_HERE";
-        }
-    }
-    
-    private static String parseApiKeyFromFile(File file) throws Exception {
-        FileInputStream fis = new FileInputStream(file);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
-        StringBuilder content = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            if (line.contains("openai_api_key")) {
-                int start = line.indexOf(">") + 1;
-                int end = line.lastIndexOf("<");
-                if (start > 0 && end > start) {
-                    reader.close();
-                    return line.substring(start, end);
-                }
-            }
-        }
-        reader.close();
-        throw new Exception("API key not found in file");
+        Log.d(TAG, "API key loaded from SharedPreferences");
+        return apiKey;
     }
     
     public interface CaseStudyCallback {
@@ -82,9 +45,13 @@ public class OpenAIService {
     public static void generateCaseStudy(Context context, NewsArticle article, CaseStudyCallback callback) {
         new Thread(() -> {
             try {
-                initApiKey(context);
+                String apiKey = getApiKey(context);
+                if (apiKey.isEmpty()) {
+                    callback.onError("API key not configured");
+                    return;
+                }
                 String prompt = buildPrompt(article);
-                String response = callOpenAI(prompt);
+                String response = callOpenAI(prompt, apiKey);
                 CaseStudy caseStudy = parseCaseStudy(response, article);
                 callback.onSuccess(caseStudy);
             } catch (Exception e) {
@@ -97,9 +64,13 @@ public class OpenAIService {
     public static void generateCombinedCaseStudy(Context context, List<NewsArticle> articles, CaseStudyCallback callback) {
         new Thread(() -> {
             try {
-                initApiKey(context);
+                String apiKey = getApiKey(context);
+                if (apiKey.isEmpty()) {
+                    callback.onError("API key not configured");
+                    return;
+                }
                 String prompt = buildCombinedPrompt(articles);
-                String response = callOpenAI(prompt);
+                String response = callOpenAI(prompt, apiKey);
                 CaseStudy caseStudy = parseCombinedCaseStudy(response, articles);
                 callback.onSuccess(caseStudy);
             } catch (Exception e) {
@@ -168,12 +139,12 @@ public class OpenAIService {
         return prompt.toString();
     }
 
-    private static String callOpenAI(String prompt) throws Exception {
+    private static String callOpenAI(String prompt, String apiKey) throws Exception {
         URL url = new URL(API_URL);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Authorization", "Bearer " + API_KEY);
+        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
         conn.setDoOutput(true);
 
         JSONObject requestBody = new JSONObject();

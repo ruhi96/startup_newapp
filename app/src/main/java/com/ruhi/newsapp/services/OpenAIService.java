@@ -20,6 +20,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class OpenAIService {
     private static final String TAG = "OpenAIService";
@@ -91,6 +93,21 @@ public class OpenAIService {
             }
         }).start();
     }
+    
+    public static void generateCombinedCaseStudy(Context context, List<NewsArticle> articles, CaseStudyCallback callback) {
+        new Thread(() -> {
+            try {
+                initApiKey(context);
+                String prompt = buildCombinedPrompt(articles);
+                String response = callOpenAI(prompt);
+                CaseStudy caseStudy = parseCombinedCaseStudy(response, articles);
+                callback.onSuccess(caseStudy);
+            } catch (Exception e) {
+                Log.e(TAG, "Error generating combined case study", e);
+                callback.onError(e.getMessage());
+            }
+        }).start();
+    }
 
     private static String buildPrompt(NewsArticle article) {
         return "You are a Harvard Business School case study writer. Based on the following news article, " +
@@ -110,6 +127,45 @@ public class OpenAIService {
                 "  \"conclusion\": \"Summary and outlook (2-3 sentences)\"\n" +
                 "}\n\n" +
                 "Ensure all text is in simple language, suitable for general readers.";
+    }
+    
+    private static String buildCombinedPrompt(List<NewsArticle> articles) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are a Harvard Business School case study writer. Below are multiple news articles from different sources. ");
+        prompt.append("Analyze these articles and determine if they are about the same or related topics. ");
+        prompt.append("If they are related, combine them into ONE comprehensive Harvard-style case study. ");
+        prompt.append("If they cover different topics, focus on the most recent and significant story. ");
+        prompt.append("Use simple, clear language.\n\n");
+        
+        prompt.append("Articles:\n\n");
+        for (int i = 0; i < articles.size(); i++) {
+            NewsArticle article = articles.get(i);
+            prompt.append("Article ").append(i + 1).append(":\n");
+            prompt.append("Title: ").append(article.getTitle()).append("\n");
+            prompt.append("Source: ").append(article.getSource()).append("\n");
+            prompt.append("Content: ").append(article.getContent() != null ? article.getContent() : article.getDescription()).append("\n\n");
+        }
+        
+        prompt.append("Instructions:\n");
+        prompt.append("1. Identify if articles discuss the same topic or related topics\n");
+        prompt.append("2. If related, combine insights from multiple sources into one comprehensive case study\n");
+        prompt.append("3. If different topics, choose the most newsworthy story\n");
+        prompt.append("4. Create ONE Harvard-style case study with proper citations\n\n");
+        
+        prompt.append("Please provide the case study in the following JSON format:\n");
+        prompt.append("{\n");
+        prompt.append("  \"title\": \"Clear, descriptive title that reflects the main topic\",\n");
+        prompt.append("  \"executiveSummary\": \"Brief overview combining key points from related articles (2-3 sentences)\",\n");
+        prompt.append("  \"background\": \"Context and history, incorporating information from multiple sources if related (3-4 sentences)\",\n");
+        prompt.append("  \"problemStatement\": \"The main challenge or issue identified across sources (2-3 sentences)\",\n");
+        prompt.append("  \"analysis\": \"Detailed examination combining insights from all related articles (4-5 sentences)\",\n");
+        prompt.append("  \"alternatives\": \"Possible approaches or solutions mentioned across sources (3-4 options)\",\n");
+        prompt.append("  \"recommendations\": \"Suggested course of action based on combined analysis (3-4 sentences)\",\n");
+        prompt.append("  \"conclusion\": \"Summary and outlook considering all sources (2-3 sentences)\"\n");
+        prompt.append("}\n\n");
+        prompt.append("Ensure all text is in simple language, suitable for general readers.");
+        
+        return prompt.toString();
     }
 
     private static String callOpenAI(String prompt) throws Exception {
@@ -193,6 +249,49 @@ public class OpenAIService {
         caseStudy.setConclusion(json.optString("conclusion", ""));
         caseStudy.setSource("Source: " + article.getSource() + " - " + article.getUrl());
         caseStudy.setSourceUrl(article.getUrl());
+        
+        return caseStudy;
+    }
+    
+    private static CaseStudy parseCombinedCaseStudy(String response, List<NewsArticle> articles) throws Exception {
+        // Extract JSON from response (might be wrapped in markdown code blocks)
+        String jsonStr = response.trim();
+        if (jsonStr.startsWith("```json")) {
+            jsonStr = jsonStr.substring(7);
+        }
+        if (jsonStr.startsWith("```")) {
+            jsonStr = jsonStr.substring(3);
+        }
+        if (jsonStr.endsWith("```")) {
+            jsonStr = jsonStr.substring(0, jsonStr.length() - 3);
+        }
+        jsonStr = jsonStr.trim();
+
+        JSONObject json = new JSONObject(jsonStr);
+        
+        CaseStudy caseStudy = new CaseStudy();
+        caseStudy.setTitle(json.optString("title", articles.get(0).getTitle()));
+        caseStudy.setExecutiveSummary(json.optString("executiveSummary", ""));
+        caseStudy.setBackground(json.optString("background", ""));
+        caseStudy.setProblemStatement(json.optString("problemStatement", ""));
+        caseStudy.setAnalysis(json.optString("analysis", ""));
+        caseStudy.setAlternatives(json.optString("alternatives", ""));
+        caseStudy.setRecommendations(json.optString("recommendations", ""));
+        caseStudy.setConclusion(json.optString("conclusion", ""));
+        
+        // Combine sources from all articles
+        StringBuilder sources = new StringBuilder("Sources: ");
+        for (int i = 0; i < articles.size(); i++) {
+            NewsArticle article = articles.get(i);
+            sources.append(article.getSource());
+            if (i < articles.size() - 1) {
+                sources.append(", ");
+            }
+        }
+        sources.append(" | Combined analysis from ").append(articles.size()).append(" article(s)");
+        
+        caseStudy.setSource(sources.toString());
+        caseStudy.setSourceUrl(articles.get(0).getUrl());
         
         return caseStudy;
     }

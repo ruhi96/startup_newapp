@@ -115,68 +115,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void generateCaseStudies(List<NewsArticle> articles) {
-        logDebug("Generating case study with OpenAI...");
+        logDebug("Analyzing " + articles.size() + " articles for related topics...");
+        logDebug("Generating combined case study with OpenAI...");
         
-        List<CaseStudy> caseStudies = new ArrayList<>();
-        AtomicInteger completedCount = new AtomicInteger(0);
-        final int totalArticles = articles.size();
-        
-        for (NewsArticle article : articles) {
-            logDebug("Processing: " + article.getTitle());
-            
-            OpenAIService.generateCaseStudy(this, article, new OpenAIService.CaseStudyCallback() {
-                @Override
-                public void onSuccess(CaseStudy caseStudy) {
-                    synchronized (caseStudies) {
-                        caseStudies.add(caseStudy);
-                        int completed = completedCount.incrementAndGet();
-                        logDebug("Generated case study " + completed + "/" + totalArticles);
-                        
-                        if (completed == totalArticles) {
-                            runOnUiThread(() -> {
-                                adapter.setCaseStudies(caseStudies);
-                                progressBar.setVisibility(View.GONE);
-                                btnRefresh.setEnabled(true);
-                                logDebug("Case study loaded successfully!");
-                                String message = caseStudies.size() == 1 ? 
-                                        "Case study loaded!" : 
-                                        "Loaded " + caseStudies.size() + " case studies";
-                                Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-                            });
-                        }
-                    }
-                }
+        // Use the new combined method that intelligently merges related articles
+        OpenAIService.generateCombinedCaseStudy(this, articles, new OpenAIService.CaseStudyCallback() {
+            @Override
+            public void onSuccess(CaseStudy caseStudy) {
+                logDebug("Case study generated successfully!");
+                runOnUiThread(() -> {
+                    List<CaseStudy> caseStudies = new ArrayList<>();
+                    caseStudies.add(caseStudy);
+                    adapter.setCaseStudies(caseStudies);
+                    progressBar.setVisibility(View.GONE);
+                    btnRefresh.setEnabled(true);
+                    logDebug("Case study loaded and displayed!");
+                    Toast.makeText(MainActivity.this, "Case study loaded!", Toast.LENGTH_SHORT).show();
+                });
+            }
 
-                @Override
-                public void onError(String error) {
-                    synchronized (caseStudies) {
-                        int completed = completedCount.incrementAndGet();
-                        logDebug("ERROR generating case study " + completed + "/" + 
-                                totalArticles + ": " + error);
-                        
-                        if (completed == totalArticles) {
-                            runOnUiThread(() -> {
-                                adapter.setCaseStudies(caseStudies);
-                                progressBar.setVisibility(View.GONE);
-                                btnRefresh.setEnabled(true);
-                                if (caseStudies.size() > 0) {
-                                    logDebug("Finished with " + caseStudies.size() + " successful case study");
-                                    String message = caseStudies.size() == 1 ? 
-                                            "Case study loaded!" : 
-                                            "Loaded " + caseStudies.size() + " case studies";
-                                    Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-                                } else {
-                                    logDebug("Failed to load case study");
-                                    Toast.makeText(MainActivity.this, 
-                                            "Failed to load case study", 
-                                            Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-                    }
-                }
-            });
-        }
+            @Override
+            public void onError(String error) {
+                logDebug("ERROR generating case study: " + error);
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    btnRefresh.setEnabled(true);
+                    logDebug("Failed to load case study");
+                    Toast.makeText(MainActivity.this, 
+                            "Failed to load case study: " + error, 
+                            Toast.LENGTH_LONG).show();
+                });
+            }
+        });
     }
 
     private void logDebug(String message) {

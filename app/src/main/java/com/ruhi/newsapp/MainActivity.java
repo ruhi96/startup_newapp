@@ -82,14 +82,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadCaseStudies() {
-        logDebug("Starting to load case studies...");
+        logDebug("Starting to load case study...");
         progressBar.setVisibility(View.VISIBLE);
         btnRefresh.setEnabled(false);
         
         NewsScraperService.fetchAllNews(new NewsScraperService.NewsCallback() {
             @Override
             public void onSuccess(List<NewsArticle> articles) {
-                logDebug("Fetched " + articles.size() + " news articles");
+                logDebug("Fetched " + articles.size() + " news article(s)");
                 generateCaseStudies(articles);
             }
 
@@ -115,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void generateCaseStudies(List<NewsArticle> articles) {
-        logDebug("Generating case studies with OpenAI...");
+        logDebug("Generating case study with OpenAI...");
         
         List<CaseStudy> caseStudies = new ArrayList<>();
         AtomicInteger completedCount = new AtomicInteger(0);
@@ -137,10 +137,11 @@ public class MainActivity extends AppCompatActivity {
                                 adapter.setCaseStudies(caseStudies);
                                 progressBar.setVisibility(View.GONE);
                                 btnRefresh.setEnabled(true);
-                                logDebug("All case studies loaded successfully!");
-                                Toast.makeText(MainActivity.this, 
-                                        "Loaded " + caseStudies.size() + " case studies", 
-                                        Toast.LENGTH_SHORT).show();
+                                logDebug("Case study loaded successfully!");
+                                String message = caseStudies.size() == 1 ? 
+                                        "Case study loaded!" : 
+                                        "Loaded " + caseStudies.size() + " case studies";
+                                Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
                             });
                         }
                     }
@@ -158,11 +159,18 @@ public class MainActivity extends AppCompatActivity {
                                 adapter.setCaseStudies(caseStudies);
                                 progressBar.setVisibility(View.GONE);
                                 btnRefresh.setEnabled(true);
-                                logDebug("Finished with " + caseStudies.size() + 
-                                        " successful case studies");
-                                Toast.makeText(MainActivity.this, 
-                                        "Loaded " + caseStudies.size() + " case studies", 
-                                        Toast.LENGTH_SHORT).show();
+                                if (caseStudies.size() > 0) {
+                                    logDebug("Finished with " + caseStudies.size() + " successful case study");
+                                    String message = caseStudies.size() == 1 ? 
+                                            "Case study loaded!" : 
+                                            "Loaded " + caseStudies.size() + " case studies";
+                                    Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+                                } else {
+                                    logDebug("Failed to load case study");
+                                    Toast.makeText(MainActivity.this, 
+                                            "Failed to load case study", 
+                                            Toast.LENGTH_SHORT).show();
+                                }
                             });
                         }
                     }

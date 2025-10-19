@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Tech Case Studies</string>
-    <string name="loading">Loading case studies…</string>
+    <string name="loading">Loading case study…</string>
     <string name="refresh">Refresh</string>
-    <string name="error_loading">Error loading case studies</string>
+    <string name="error_loading">Error loading case study</string>
     <string name="toggle_debug">Toggle Debug</string>
 </resources>
 

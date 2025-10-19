@@ -1,6 +1,6 @@
 # Android News Case Study App
 
-An Android application that fetches the latest tech news from multiple sources and generates Harvard-style case studies using OpenAI's GPT technology.
+An Android application that fetches the latest tech news from multiple sources and generates a Harvard-style case study using OpenAI's GPT technology.
 
 ## Features
 
@@ -72,9 +72,10 @@ An Android application that fetches the latest tech news from multiple sources a
 ## Usage
 
 1. Launch the app
-2. Click "Refresh" to fetch latest news and generate case studies
-3. Toggle "Debug" view to see real-time operation logs
-4. Scroll through the case studies displayed in cards
+2. The app automatically fetches the most recent tech news and generates a case study
+3. Click "Refresh" to generate a new case study from the latest news
+4. Toggle "Debug" view to see real-time operation logs
+5. Scroll through the case study sections displayed in a card
 
 ## License
 

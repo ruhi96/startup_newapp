@@ -47,11 +47,11 @@ public class NewsScraperService {
                 callback.onProgress("Fetching from Google News...");
                 allArticles.addAll(fetchGoogleNews());
                 
-                // Sort by timestamp and get top 10
+                // Sort by timestamp and get the most recent article
                 allArticles.sort((a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
                 
-                List<NewsArticle> top10 = allArticles.subList(0, Math.min(10, allArticles.size()));
-                callback.onSuccess(top10);
+                List<NewsArticle> topArticle = allArticles.subList(0, Math.min(1, allArticles.size()));
+                callback.onSuccess(topArticle);
                 
             } catch (Exception e) {
                 Log.e(TAG, "Error fetching news", e);

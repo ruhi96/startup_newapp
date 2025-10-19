@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2025-10-19
+
+### Added
+- **Intelligent News Combination Feature** 🧠
+  - App now fetches up to 5 recent articles from all sources
+  - OpenAI analyzes articles to detect related topics
+  - Automatically combines related news into ONE comprehensive case study
+  - Multi-source citations (shows all sources used)
+  - AI-powered topic detection and synthesis
+
+### Changed
+- Enhanced `OpenAIService` with `generateCombinedCaseStudy()` method
+- Updated `NewsScraperService` to fetch top 5 articles instead of 1
+- Simplified `MainActivity` callback logic for single case study generation
+- Improved case study quality with multi-source perspectives
+
+### Benefits
+- Richer content from multiple sources
+- Better context with combined insights
+- More comprehensive analysis
+- Proper attribution of all sources
+- Same API efficiency (1 call per refresh)
+
 ## [1.1.0] - 2025-10-19
 
 ### Changed

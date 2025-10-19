@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2025-10-19
+
+### Added
+- **API Key Popup Dialog** 🔐
+  - User-friendly popup to enter OpenAI API key
+  - Settings button to change API key anytime
+  - Secure storage in SharedPreferences
+  - Professional Material Design dialog
+  - Link to get OpenAI API key
+  - Pre-fills existing key for editing
+
+### Changed
+- **Removed Hardcoded API Keys** 
+  - No more hardcoded keys in source code
+  - No longer using local_api_keys.xml or api_keys.xml
+  - OpenAIService now gets key from SharedPreferences
+  - More secure and production-ready approach
+
+### Security
+- API keys now stored in Android SharedPreferences
+- No sensitive data in source code
+- Easy to rotate/change keys
+- User controls their own API key
+
+### Benefits
+- ✅ Better security (no hardcoded keys)
+- ✅ User-friendly (popup dialog)
+- ✅ Easy to change keys (Settings button)
+- ✅ Production-ready approach
+- ✅ Clean source code
+
 ## [1.2.0] - 2025-10-19
 
 ### Added

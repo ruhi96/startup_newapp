@@ -39,11 +39,15 @@ An Android application that fetches the latest tech news from multiple sources a
    git clone https://github.com/ruhi96/startup_newapp.git
    ```
 
-2. Open the project in Android Studio
+2. **Configure OpenAI API Key** (IMPORTANT):
+   - See [API_KEY_SETUP.md](API_KEY_SETUP.md) for detailed instructions
+   - Quick setup: Copy `local_api_keys.xml` to project root and add your API key
 
-3. Sync Gradle files
+3. Open the project in Android Studio
 
-4. Run the app on an emulator or physical device
+4. Sync Gradle files
+
+5. Run the app on an emulator or physical device
 
 ## Architecture
 
